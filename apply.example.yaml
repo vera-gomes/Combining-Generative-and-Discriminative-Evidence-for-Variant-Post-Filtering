@@ -1,0 +1,87 @@
+# Apply-mode configuration template.
+#
+# Copy this file (e.g. to configs/apply.local.yaml), fill in your own paths,
+# and keep the local copy OUT of version control — see .gitignore.
+
+mode: apply
+
+paths:
+  # GATK-derived (g)VCF to score. See README "Data availability" for how to
+  # obtain/regenerate NA06985 (or substitute your own WGS sample).
+  apply_input_vcf: ./data/input/sample.grch38.g.vcf.gz
+
+  # Directory produced by a previous `mode: train` run (contains models/,
+  # cv_oof_scores.csv, etc.). Point this at YOUR training output directory.
+  trained_model_dir: ./models/trained_run
+
+  # Apply mode creates its own timestamped subdirectory under this path.
+  output_dir: ./output/apply
+
+features:
+  - MQ
+  - QD
+  - FS
+  - SOR
+  - MQRankSum
+  - ReadPosRankSum
+  - BaseQRankSum
+  - DP
+
+evaluation:
+  primary_sensitivity: 0.999
+  variant_classification_target_sens: 0.99
+
+  # Bootstrap subsample size — keeps large-scale (e.g. PopDB) bootstraps
+  # tractable. Increase for tighter CIs at the cost of runtime.
+  apply_stats_max_n: 30000
+
+  # Skip bootstrap entirely if the minority class has fewer than this many
+  # samples (protects against e.g. a ClinVar regime with very few positives).
+  min_class_n_for_bootstrap: 30
+
+  external_validation:
+    enabled: true
+
+    clinvar:
+      enabled: true
+      # Public NCBI ClinVar VCF — no local copy needed, fetched by URL.
+      vcf: https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz
+
+    # Population-database sources used for PopDB-supported enrichment.
+    # Prefer remote URLs (as below) so the config has no machine-specific
+    # paths. If you must use a local mirror for a chromosome (e.g. for
+    # bandwidth or reliability reasons), point it at a path relative to the
+    # repo or set via the POPDB_LOCAL_DIR environment variable in your own
+    # untracked config — do not commit personal filesystem paths.
+    population_dbs:
+      # ── gnomAD v3.1.2 (public, remote) ──────────────────────────────────
+      - https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1.2/vcf/genomes/gnomad.genomes.v3.1.2.sites.chr1.vcf.bgz
+      - https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1.2/vcf/genomes/gnomad.genomes.v3.1.2.sites.chr2.vcf.bgz
+      # ... repeat for chr3-chr22, chrX, chrY as needed (see full list in
+      #     docs/population_db_sources.md)
+
+      # ── 1000 Genomes phase 3 (public, remote) ───────────────────────────
+      - https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/ALL.chr1.shapeit2_integrated_snvindels_v2a_27022019.GRCh38.phased.vcf.gz
+      - https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/ALL.chr2.shapeit2_integrated_snvindels_v2a_27022019.GRCh38.phased.vcf.gz
+      # ... repeat for chr3-chr22, chrX (see full list in
+      #     docs/population_db_sources.md; chrY is not published on the
+      #     1000 Genomes FTP and is intentionally omitted)
+
+    popdb_chunk_bp: 1000000
+    popdb_fetch_retries: 3
+
+statistics:
+  pairwise_comparisons: []   # empty = all-vs-all (every model pair)
+  pairwise_bootstrap_n: 500
+  pairwise_bootstrap_seed: 42
+  prob_threshold: 0.5
+  logloss_proba_mode: auto
+  bayes_bootstrap:
+    n_draws: 2000
+
+memory_safety:
+  skip_memory_intensive_models: false
+  lightgbm_memory_safe: true
+  max_memory_mb: 8000
+  batch_size: 50000
+  monitor_memory: true

@@ -1,0 +1,33 @@
+# Personal/local configs — never commit machine-specific paths
+configs/*.local.yaml
+configs/_*.yaml
+
+# Data (raw and derived) — large, often controlled-access, or public+re-fetchable
+data/
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+*.vcf.gz.csi
+*.bgz
+*.bgz.tbi
+
+# Model artifacts and run outputs — regenerate via train/apply, or distribute via Releases/Zenodo
+models/
+output/
+*.pkl
+*.joblib
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/

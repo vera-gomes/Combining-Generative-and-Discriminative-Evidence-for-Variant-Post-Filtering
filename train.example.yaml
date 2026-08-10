@@ -1,0 +1,106 @@
+# Train-mode configuration template.
+#
+# Copy this file (e.g. to configs/train.local.yaml), fill in your own paths,
+# and keep the local copy OUT of version control — see .gitignore.
+
+mode: train
+
+paths:
+  # Benchmark call set and truth VCFs used for cross-validated training.
+  train_input_vcf: ./data/input/benchmark_calls.vcf.gz
+  truth_vcf: ./data/input/truth.vcf.gz
+  output_dir: ./output/train
+
+features:
+  - DP
+  - QD
+  - FS
+  - SOR
+  - MQ
+  - MQRankSum
+  - ReadPosRankSum
+  - BaseQRankSum
+  - ClippingRankSum
+  - ExcessHet
+  - InbreedingCoeff
+
+models:
+  n_components: 5
+  max_iter_gm: 500
+  max_iter_bgm: 1000
+  random_state: 42
+
+  lightgbm:
+    n_estimators: 100
+    learning_rate: 0.05
+    max_depth: 7
+    num_leaves: 31
+    min_child_samples: 20
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.0
+    reg_lambda: 0.0
+
+  lightgbm_optuna:
+    n_trials: 25
+    metric: ROC_AUC
+    validation_fraction: 0.2
+    n_estimators_min: 50
+    n_estimators_max: 300
+    learning_rate_min: 0.01
+    learning_rate_max: 0.2
+    max_depth_min: 3
+    max_depth_max: 12
+    num_leaves_min: 16
+    num_leaves_max: 255
+    min_child_samples_min: 5
+    min_child_samples_max: 100
+    subsample_min: 0.5
+    subsample_max: 1.0
+    colsample_bytree_min: 0.5
+    colsample_bytree_max: 1.0
+    reg_alpha_min: 1.0e-8
+    reg_alpha_max: 10.0
+    reg_lambda_min: 1.0e-8
+    reg_lambda_max: 10.0
+    min_split_gain_min: 0.0
+    min_split_gain_max: 1.0
+
+  lightgbm_multiobj:
+    lambda: 0.85            # weight on PR-AUC vs (1-lambda) on normalized runtime
+    runtime_budget_sec: 5.0
+
+  hybrid:
+    n_alphas: 11             # grid resolution for nested-CV alpha search
+    cv_splits: 3
+
+cv:
+  n_splits: 5
+  use_block_cv: true
+  block_size_bp: 1000000
+
+evaluation:
+  primary_sensitivity: 0.999
+  variant_classification_target_sens: 0.99
+  min_class_n_for_bootstrap: 500
+  apply_stats_max_n: 50000
+  external_validation:
+    enabled: false
+    clinvar:
+      enabled: false
+      vcf: https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz
+    population_dbs: []
+    popdb_chunk_bp: 1000000
+    popdb_fetch_retries: 3
+
+statistics:
+  pairwise_bootstrap_n: 1000
+  pairwise_bootstrap_seed: 123
+  pairwise_comparisons: []   # empty = all-vs-all
+
+memory_safety:
+  monitor_memory: true
+  max_memory_mb: 8000
+  skip_memory_intensive_models: true
+  lightgbm_memory_safe: true
+  batch_size: 100000
