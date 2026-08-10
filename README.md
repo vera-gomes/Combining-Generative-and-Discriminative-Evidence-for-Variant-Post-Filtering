@@ -191,7 +191,7 @@ Apply-mode runs against the full gnomAD v3.1.2 + 1000 Genomes PopDB source list 
 - **ClinVar**: public NCBI ClinVar VCF (GRCh38), fetched by URL — no local copy needed.
 - **Population databases**: gnomAD v3.1.2 genome sites VCFs and 1000 Genomes Project phase 3 biallelic SNV/INDEL VCFs (GRCh38), all public and fetched by URL — see `docs/population_db_sources.md` for the full list.
 
-Trained model artifacts (which can be large — see `models/`) are not committed to this repository; they are excluded via `.gitignore`. If you want to distribute trained models or derived VCFs, use Git LFS, GitHub Releases, or an archive with a DOI (e.g. Zenodo) rather than committing them directly, and link that location here: `[NAME OF REPOSITORY] [LINK]`.
+Trained model artifacts (which can be large — see `models/`) are not committed to this repository.
 
 ## Citation
 
