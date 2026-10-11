@@ -1,185 +1,188 @@
 # Combining Generative and Discriminative Evidence for Variant Post-Filtering
 
-Code and configuration accompanying:
+[![tests](https://github.com/vera-gomes/Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering/actions/workflows/tests.yml/badge.svg)](https://github.com/vera-gomes/Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Pinto, V., Sousa, L., and Silva, C. *Combining Generative and Discriminative Evidence for Variant Post-Filtering.* Frontiers in Bioinformatics (submitted).
+Code, configuration and result files for:
 
-This repository contains the deployment-oriented post-filtering pipeline used to train benchmark post-filtering models and apply them, without retraining, to a real whole-genome sequencing (WGS) sample (NA06985), evaluated against ClinVar-supported and population-database-supported (PopDB) external validation regimes.
+> Pinto, V., Sousa, L. and Silva, C. *Combining Generative and Discriminative Evidence for Variant Post-Filtering.* Frontiers in Bioinformatics (under revision).
 
-This is a deployment-oriented extension of an earlier caller-agnostic benchmark pipeline (Pinto et al., 2026a).
+Germline variant calling produces millions of candidate calls per genome, some of which are artefacts. A **post-filter** scores each call from its annotations so that unreliable calls can be removed. This repository contains a post-filtering pipeline that
 
-## Authors
+1. **trains** generative, discriminative and hybrid post-filters on a benchmark sample with a known truth set (NA12878, GIAB v4.2.1), and
+2. **applies** them, without retraining, to a real whole-genome sample (NA06985) and evaluates them against partial external labels from population databases and ClinVar.
 
-- **Vera Pinto** — DCM/CEAUL, Faculdade de Ciências, Universidade de Lisboa — vgpinto@ciencias.ulisboa.pt
-- **Lisete Sousa** — DCM/CEAUL, Faculdade de Ciências, Universidade de Lisboa
-- **Carina Silva** — CEAUL, Faculdade de Ciências, Universidade de Lisboa / Escola Superior de Saúde de Lisboa, Instituto Politécnico de Lisboa
+It extends the benchmark pipeline of Pinto et al. (under review), which compared post-filters across four variant callers.
 
-## Overview
+## Contents
 
-The pipeline treats variant post-filtering as a statistical classification problem operating on standardized per-variant feature summaries (MQ, QD, FS, SOR, MQRankSum, ReadPosRankSum, BaseQRankSum, DP) extracted from VCF files. It compares two families of evidence:
+- [Models](#models)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Reproducing the paper](#reproducing-the-paper)
+- [Repository structure](#repository-structure)
+- [Data sources](#data-sources)
+- [Known limitations](#known-limitations)
+- [Citation](#citation)
 
-- **Generative** models — Gaussian Mixture (GM), Bayesian Gaussian Mixture (BGM) — which characterize the feature-space structure without using benchmark labels.
-- **Discriminative** models — Logistic Regression, Random Forest, LightGBM — which learn a direct label-supervised decision boundary, along with two LightGBM extensions:
-  - **LGB_Bayes** — Optuna-based Bayesian hyperparameter search.
-  - **LGB_MultiObj** — multi-objective Bayesian optimization trading discrimination against measured runtime.
-- **Hybrid** scores blending generative and discriminative evidence:
-  - **Hybrid_α** — data-driven blend weight selected by nested cross-validation.
-  - **Hybrid_0.8** — fixed-weight blend (0.80 × LightGBM + 0.20 × GM), grounded in the cross-validation convergence/variance analysis (Figures 3–5 of the paper).
+## Models
 
-Benchmark-trained models are applied in **apply mode**, without retraining, to a GATK HaplotypeCaller callset from NA06985 and scored under two external, partially labeled validation regimes:
+Every call is described by eight GATK HaplotypeCaller INFO annotations: `QD`, `MQ`, `FS`, `SOR`, `MQRankSum`, `ReadPosRankSum`, `BaseQRankSum` and `DP`. The pipeline reads any VCF and a list of annotation names, so other callers can be used if they emit comparable annotations.
 
-- **ClinVar-supported pathogenic enrichment** — 360 positives vs. 5,068,656 background variants.
-- **PopDB-supported population enrichment** — 4,859,857 positives vs. 209,159 background variants.
+| Name in the paper | Name in the code | Description |
+|---|---|---|
+| `GM`, `BGM` | `GM`, `BGM` | Class-conditional Gaussian / Bayesian Gaussian mixtures (5 components), fitted separately to true and false calls; score = sigmoid of the log-likelihood ratio (a VQSLOD-like score) |
+| `LogReg` | `LogReg` | Logistic regression |
+| `RF` | `RandForest` | Random forest (50 trees, depth 10) |
+| `LGB` | `LGB` | LightGBM with default settings |
+| `LGB_Bayes` | `LGB_Bayes` | LightGBM tuned by Bayesian optimization (Optuna TPE, 25 trials, ROC AUC) |
+| `LGB_MultiObj` | `LGB_MultiObj` | LightGBM tuned with the multi-objective criterion J = λ·PR_AUC − (1−λ)·min(t/T, 1), λ = 0.85, T = 5 s |
+| `Hybrid_α` | `Hybrid_LGB`, `Hybrid_LGB_Bayes`, `Hybrid_LGB_MultiObj`, `Hybrid_LGB_alpha1` | α·p_LGB + (1−α)·p_GM with α chosen by nested 3-fold CV (selected α = 1, so these equal their LightGBM base) |
+| `Hybrid_0.8`, `Hybrid_0.7` | `Hybrid_LGB_alpha08`, `Hybrid_LGB_alpha07` | Fixed-weight blends with 20% and 30% mixture evidence |
 
-Evaluation includes AUC, precision–recall summaries, sensitivity-tranche operating points, paired DeLong AUC tests, McNemar and (Bayesian) bootstrap comparisons, all with Holm's correction for multiple comparisons.
+Implementation details that matter for correctness:
+
+- **Labels are allele-aware.** A call is true only if chromosome, position, REF and ALT all match the truth set.
+- **No leakage.** Missing values are imputed with the training mean, and `GM`, `BGM` and `LogReg` use standardized features. Imputation and scaling are fitted inside each CV fold, and the fitted objects are saved and reused in apply mode. Tree models use unscaled features.
+- **Grouped CV.** 5-fold cross-validation uses 1 Mb genomic blocks (`StratifiedGroupKFold`), so neighbouring correlated calls never fall in both training and validation folds.
+
+## Installation
+
+Python ≥ 3.10. `pysam` needs a POSIX system (Linux or macOS).
+
+```bash
+git clone https://github.com/vera-gomes/Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering.git
+cd Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[full]"        # pipeline + optional extras (scikit-optimize fallback, Excel export, memory monitor)
+pip install -e ".[dev]"         # adds pytest, to run the tests
+```
+
+or directly from GitHub:
+
+```bash
+pip install "postfilter-pipeline[full] @ git+https://github.com/vera-gomes/Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering.git"
+```
+
+Check the installation:
+
+```bash
+postfilter-pipeline --help
+pytest -m "not slow"            # unit tests (seconds)
+pytest -m slow                  # train + apply on a small synthetic dataset (~3 min)
+```
+
+## Quick start
+
+The pipeline is driven by a YAML file. Copy a template, edit the paths, and run:
+
+```bash
+cp configs/train.example.yaml configs/train.local.yaml   # *.local.yaml is git-ignored
+cp configs/apply.example.yaml configs/apply.local.yaml
+
+postfilter-pipeline --config configs/train.local.yaml    # fit and cross-validate all models
+postfilter-pipeline --config configs/apply.local.yaml    # score a new sample with the saved models
+```
+
+Command-line flags override paths in the config:
+
+```bash
+postfilter-pipeline --config configs/apply.local.yaml \
+    --apply-vcf /path/to/sample.vcf.gz \
+    --trained-model-dir output/train_YYYYMMDD_HHMMSS \
+    --output-dir output/apply_sample2
+```
+
+**Train mode** writes the fitted models, imputer and scaler (`models/`), per-fold and summary CV metrics, out-of-fold scores, LightGBM tuning and hybrid-α summaries, and diagnostic plots.
+**Apply mode** writes one score per call and model (`real_data_scores.csv`; with population databases configured, also `scored_variants_with_external_validation.csv`, which adds the PopDB label) and diagnostic plots.
+
+Main config sections:
+
+| Section | Purpose |
+|---|---|
+| `paths` | input VCF(s), truth VCF, trained-model directory, output directory |
+| `features` | INFO annotations used as features |
+| `models` | mixture, LightGBM, Optuna search space, multi-objective (`lambda`, `runtime_budget_sec`) and hybrid (`n_alphas`, `cv_splits`) settings |
+| `cv` | number of folds, block CV and block size |
+| `evaluation.external_validation` | ClinVar VCF and population-database sources (apply mode) |
+| `memory_safety` | memory ceiling and batch size for large callsets |
+
+## Reproducing the paper
+
+The full workflow is described in [`docs/reproducing_the_paper.md`](docs/reproducing_the_paper.md). In short:
+
+| Step | Command | Output |
+|---|---|---|
+| 1. Train on NA12878 | `postfilter-pipeline --config configs/train.local.yaml` | models, CV results (`results/train/`) |
+| 2. Score NA06985 | `postfilter-pipeline --config configs/apply.local.yaml` | `scored_variants_with_external_validation.csv` (5,069,016 calls) |
+| 3. External validation | `python scripts/reeval_external.py --scores <scores.csv> --clinvar clinvar.vcf.gz --out results/external_validation --n-boot 1000` | summaries, pairwise tests and operating points for each evaluation regime |
+| 4. Tables and figures | `python scripts/make_results.py --reeval results/external_validation --train results/train --clinvar-records results/external_validation/clinvar_records_in_callset.csv.gz` | every table (`tables/*.tex`) and figure of the paper and supplement |
+| 5. Score distributions | `python scripts/plot_scores.py --scores <scores.csv> --out fig_score_distributions` | Figure 2 |
+
+The `results/` folder holds the result files of the published run, so step 4 regenerates every table without rerunning steps 1–3. The external-validation statistics in the paper come from `scripts/reeval_external.py` (exact DeLong tests with Holm correction, and full-data paired bootstraps with 1,000 replicates), not from the summaries that apply mode writes itself; see [Known limitations](#known-limitations).
 
 ## Repository structure
 
 ```
-.
-├── README.md
-├── AGENTS.md                   # structural/pseudocode summary for coding agents
-├── pyproject.toml               # installable package metadata (pip install -e .)
-├── requirements.txt
-├── .gitignore
-├── src/
-│   └── postfilter_pipeline/     # the installable package (train + apply modes)
-│       ├── config.py
-│       ├── models.py
-│       ├── variant_io.py
-│       ├── metrics.py
-│       ├── stats.py
-│       ├── memory_utils.py
-│       ├── data_prep.py
-│       ├── training.py
-│       ├── external_validation.py
-│       ├── plotting.py
-│       ├── pipeline.py          # run_train_pipeline / run_apply_pipeline
-│       └── cli.py                # postfilter-pipeline console script
-├── configs/
-│   ├── train.example.yaml         # template — copy to train.local.yaml and edit
-│   └── apply.example.yaml         # template — copy to apply.local.yaml and edit
-├── docs/
-│   └── population_db_sources.md   # full public gnomAD / 1000 Genomes URL list
-├── data/input/                    # your local input VCFs — gitignored, not tracked
-├── models/                        # trained model artifacts — gitignored, not tracked
-└── output/                        # pipeline run outputs — gitignored, not tracked
+├── src/postfilter_pipeline/   installable package
+│   ├── cli.py                 command-line entry point (postfilter-pipeline)
+│   ├── config.py              YAML configuration and defaults
+│   ├── data_prep.py           annotation extraction, allele-aware labelling, genomic blocks
+│   ├── models.py              imputer, scaler, mixture (VQSLOD) and hybrid scoring
+│   ├── training.py            cross-validation, LightGBM tuning, hybrid-α selection, final fit
+│   ├── metrics.py             thresholds and classification metrics
+│   ├── stats.py               DeLong, McNemar, bootstrap, Holm and Benjamini–Hochberg
+│   ├── variant_io.py          VCF I/O, population-database and ClinVar access
+│   ├── external_validation.py apply-mode scoring and built-in external evaluation
+│   ├── plotting.py            diagnostic figures
+│   ├── memory_utils.py        memory monitoring
+│   └── pipeline.py            train and apply workflows
+├── scripts/                   analysis scripts used for the paper
+│   ├── reeval_external.py     external-validation statistics (all regimes)
+│   ├── make_results.py        all tables and figures from the result files
+│   ├── plot_scores.py         score-distribution figure
+│   └── count_clinvar_pathogenic.py  lists ClinVar P/LP records present in a callset
+├── results/                   result files of the published run
+│   ├── train/                 CV metrics, LightGBM tuning, hybrid-α selection
+│   └── external_validation/   per-regime summaries, pairwise tests, operating points, ClinVar records
+├── configs/                   train and apply templates
+├── docs/                      reproduction guide, population-database URLs
+├── tests/                     unit tests and an end-to-end smoke test
+├── AGENTS.md                  module map and conventions for contributors
+├── CHANGELOG.md
+├── CITATION.cff
+└── pyproject.toml
 ```
 
-Figures and Supplementary Material tables from the manuscript are not duplicated here; they are generated by the pipeline itself (see `plots/` inside each run's output directory) or are available in the submitted manuscript.
+## Data sources
 
-See `AGENTS.md` for a module-by-module breakdown and a pseudocode summary of the train/apply pipeline logic, aimed at coding agents (and anyone who wants the structural overview without reading the full source).
+All data are public; none are stored in this repository.
 
-### Keeping the repo clean of personal paths
+| Data | Source |
+|---|---|
+| NA12878 reads (training) | Illumina TruSeq WGS, HiSeq 2000, ~50×, Illumina BaseSpace; aligned to hg38 with Isaac 04.16.09.24; called with GATK HaplotypeCaller 4.2.0.0 |
+| Truth set | GIAB HG001 v4.2.1 GRCh38 benchmark, chromosomes 1–22 |
+| NA06985 reads (application) | 1000 Genomes high-coverage (30×) set, New York Genome Center, run ERR3239276, via [IGSR](https://www.internationalgenome.org/data-portal/sample/NA06985); called with GATK HaplotypeCaller 4.6.1.0 against `GRCh38_full_analysis_set_plus_decoy_hla` |
+| Population databases | gnomAD v3.1.2 genome sites and the 1000 Genomes 20190312 GRCh38 biallelic SNV/indel release; URLs in [`docs/population_db_sources.md`](docs/population_db_sources.md) |
+| ClinVar | NCBI ClinVar GRCh38 VCF, release of 4 October 2026 (`fileDate` 20261004) |
 
-`configs/*.example.yaml` are templates with placeholder, relative paths (`./data/...`, `./models/...`). To run the pipeline:
+## Known limitations
 
-```bash
-cp configs/train.example.yaml configs/train.local.yaml
-cp configs/apply.example.yaml configs/apply.local.yaml
-# edit the *.local.yaml files with your actual machine-specific paths
-```
-
-`configs/*.local.yaml` is covered by `.gitignore`, so your real paths (input VCF locations, trained-model directories, etc.) never get committed. Only the sanitized `*.example.yaml` templates are tracked.
-
-## Requirements
-
-- Python ≥ 3.10
-- See `requirements.txt` for pinned dependencies (`numpy`, `pandas`, `scikit-learn`, `lightgbm`, `optuna`, `pysam`, `scipy`, `matplotlib`, `PyYAML`, `joblib`; optional: `scikit-optimize`, `openpyxl`, `psutil`)
-- `htslib`/`pysam` for VCF/BCF I/O, including remote-index (`.tbi`) fetching over HTTPS for remote population-database VCFs
-
-Install as an editable package (recommended — this also registers the
-`postfilter-pipeline` console script):
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-# optional extras: Optuna-based Bayesian search, scikit-optimize fallback,
-# Excel export, and memory monitoring
-pip install -e ".[full]"
-```
-
-or, without installing the package, just the pinned dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Verify `pysam` can open a remote, indexed VCF before running apply mode against the gnomAD/1000 Genomes URLs listed in `docs/population_db_sources.md`.
-
-## Configuration
-
-The pipeline is driven entirely by a YAML config (see `configs/`). Key sections:
-
-- `mode`: `train` or `apply`
-- `paths`: input VCF, trained-model directory, output directory — **use your own `*.local.yaml`, not the tracked examples**
-- `features`: the feature columns used by all models
-- `evaluation`: target sensitivities, bootstrap subsample size, minimum class size for bootstrap, and `external_validation` block (ClinVar VCF URL, list of population-database VCF/BCF sources, per-chunk fetch parameters)
-- `statistics`: which pairwise model comparisons to run (empty list = all-vs-all), bootstrap draws/seeds, probability threshold, log-loss mode
-- `memory_safety`: memory ceiling, batch size, and LightGBM memory-safe mode for large-scale apply-mode scoring
-
-## Running the pipeline
-
-After `pip install -e .`, the `postfilter-pipeline` console script is on your `PATH`:
-
-```
-# Train benchmark models
-postfilter-pipeline --config configs/train.local.yaml
-
-# Apply trained models to a new WGS sample and run external validation
-postfilter-pipeline --config configs/apply.local.yaml
-```
-
-Without installing, you can still run it as a module:
-
-```
-PYTHONPATH=src python3 -m postfilter_pipeline.cli --config configs/train.local.yaml
-```
-
-CLI flags can override individual config values without editing the file, e.g.:
-
-```
-postfilter-pipeline --config configs/apply.local.yaml \
-    --apply-vcf /path/to/another_sample.g.vcf.gz \
-    --trained-model-dir /path/to/models/trained_run \
-    --output-dir /path/to/output/apply_run2
-```
-
-See `AGENTS.md` for the pipeline's train/apply logic in pseudocode and a module-by-module map of `src/postfilter_pipeline/`.
-
-Apply-mode runs against the full gnomAD v3.1.2 + 1000 Genomes PopDB source list are I/O- and compute-intensive (the PopDB bootstrap alone is on the order of hours at the configured subsample size); see `memory_safety` and `evaluation.apply_stats_max_n` in the apply config to tune resource usage.
-
-## Data availability
-
-- **NA06985** (or your own WGS sample): 1000 Genomes Project / International Genome Sample Resource (IGSR). Not committed to this repository — see `.gitignore` and place your local copy under `data/input/`.
-- **ClinVar**: public NCBI ClinVar VCF (GRCh38), fetched by URL — no local copy needed.
-- **Population databases**: gnomAD v3.1.2 genome sites VCFs and 1000 Genomes Project phase 3 biallelic SNV/INDEL VCFs (GRCh38), all public and fetched by URL — see `docs/population_db_sources.md` for the full list.
-
-Trained model artifacts (which can be large — see `models/`) are not committed to this repository.
+- **Built-in apply-mode statistics.** For compatibility with the original submission, `external_validation.py` keeps its original behaviour. It counts every expert-reviewed ClinVar record as a positive, whatever its classification, and its bootstrap subsamples the data (`apply_stats_max_n`). Use `scripts/reeval_external.py` for analyses: it separates pathogenic from benign records, filters by review status, and bootstraps over all calls.
+- **Single caller and features.** The models were trained and applied on GATK HaplotypeCaller annotations only. Other callers need comparable annotations.
+- **Benchmark regions.** Training calls are not restricted to the GIAB high-confidence regions, so real calls outside them are labelled false.
+- **Multi-allelic records.** Only the first alternative allele of a multi-allelic record is scored.
 
 ## Citation
 
-If you use this code, please cite:
+If you use this code, please cite the paper (see [`CITATION.cff`](CITATION.cff)) and, for the benchmark pipeline and caller comparison:
 
-```
-Pinto, V., Sousa, L., and Silva, C. Combining Generative and Discriminative
-Evidence for Variant Post-Filtering. Frontiers in Bioinformatics (submitted).
-```
-
-and the related benchmark pipeline:
-
-```
-Pinto, V., Sousa, L., and Silva, C. (2026a). A caller-agnostic variant
-post-filtering pipeline. Manuscript under review.
-
-Pinto, V., Sousa, L., and Silva, C. (2026b). Variant calling in genomics:
-A comparative performance analysis and decision guide. PLOS ONE 21, 1-22.
-doi:10.1371/journal.pone.0339891
-```
+- Pinto, V., Sousa, L. and Silva, C. A caller-agnostic variant post-filtering pipeline. Manuscript under review.
+- Pinto, V., Sousa, L. and Silva, C. (2026). Variant calling in genomics: a comparative performance analysis and decision guide. *PLOS ONE* 21, 1–22. doi:[10.1371/journal.pone.0339891](https://doi.org/10.1371/journal.pone.0339891)
 
 ## Funding
 
-This work is funded by national funds through FCT – Fundação para a Ciência e a Tecnologia, I.P., under the CEAUL Research Unit (UID/00006/2025), the project UID/PRR/00006/2025, and the doctoral grant UI/BD/153743/2022.
+FCT – Fundação para a Ciência e a Tecnologia, I.P.: doctoral grant UI/BD/153743/2022, CEAUL Research Unit UID/00006/2025 and project UID/PRR/00006/2025 (European Union – NextGenerationEU).
 
 ## License
 

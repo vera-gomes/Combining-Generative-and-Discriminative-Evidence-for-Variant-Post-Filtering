@@ -11,18 +11,15 @@ paths:
   truth_vcf: ./data/input/truth.vcf.gz
   output_dir: ./output/train
 
-features:
-  - DP
+features:            # the eight GATK INFO annotations used in the paper (order as in the run)
+  - MQ
   - QD
   - FS
   - SOR
-  - MQ
   - MQRankSum
   - ReadPosRankSum
   - BaseQRankSum
-  - ClippingRankSum
-  - ExcessHet
-  - InbreedingCoeff
+  - DP
 
 models:
   n_components: 5
@@ -82,7 +79,7 @@ cv:
 evaluation:
   primary_sensitivity: 0.999
   variant_classification_target_sens: 0.99
-  min_class_n_for_bootstrap: 500
+  min_class_n_for_bootstrap: 30
   apply_stats_max_n: 50000
   external_validation:
     enabled: false
@@ -101,6 +98,6 @@ statistics:
 memory_safety:
   monitor_memory: true
   max_memory_mb: 8000
-  skip_memory_intensive_models: true
+  skip_memory_intensive_models: false   # the paper's run fitted every model
   lightgbm_memory_safe: true
   batch_size: 100000

@@ -1,0 +1,79 @@
+{
+  "LGB": {
+    "optimizer": "none",
+    "mode": "default",
+    "best_params": {
+      "objective": "binary",
+      "boosting_type": "gbdt",
+      "n_estimators": 100,
+      "learning_rate": 0.05,
+      "max_depth": 7,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_alpha": 0.0,
+      "reg_lambda": 0.0,
+      "n_jobs": 2,
+      "random_state": 42,
+      "verbose": -1,
+      "force_row_wise": true
+    },
+    "primary_metric_name": "ROC_AUC",
+    "primary_metric_value": 0.8480847309780717
+  },
+  "LGB_Bayes": {
+    "optimizer": "optuna_tpe",
+    "mode": "bayes",
+    "n_trials": 25,
+    "best_value": 0.8495885157556042,
+    "best_params": {
+      "objective": "binary",
+      "boosting_type": "gbdt",
+      "n_estimators": 292,
+      "learning_rate": 0.158860559649737,
+      "max_depth": 7,
+      "num_leaves": 128,
+      "min_child_samples": 65,
+      "subsample": 0.8428967097642717,
+      "colsample_bytree": 0.6863975918545937,
+      "reg_alpha": 2.2532598534599297e-08,
+      "reg_lambda": 6.734875612491473e-07,
+      "n_jobs": 2,
+      "random_state": 42,
+      "verbose": -1,
+      "force_row_wise": true,
+      "min_split_gain": 0.31888497863381765
+    },
+    "primary_metric_name": "ROC_AUC",
+    "primary_metric_value": 0.8495885157556042,
+    "runtime_sec": 49.15604077279568
+  },
+  "LGB_MultiObj": {
+    "optimizer": "optuna_tpe",
+    "mode": "multiobj",
+    "n_trials": 25,
+    "best_value": 0.6394138869516355,
+    "best_params": {
+      "objective": "binary",
+      "boosting_type": "gbdt",
+      "n_estimators": 183,
+      "learning_rate": 0.09083041493053454,
+      "max_depth": 11,
+      "num_leaves": 245,
+      "min_child_samples": 35,
+      "subsample": 0.90646266576834,
+      "colsample_bytree": 0.8521916070176584,
+      "reg_alpha": 6.490415398731503e-07,
+      "reg_lambda": 0.136226566446202,
+      "n_jobs": 2,
+      "random_state": 59,
+      "verbose": -1,
+      "force_row_wise": true,
+      "min_split_gain": 0.5177000068084556
+    },
+    "primary_metric_name": "PR_AUC",
+    "primary_metric_value": 0.9287222199431007,
+    "runtime_sec": 41.3321826197207
+  }
+}

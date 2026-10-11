@@ -39,10 +39,11 @@ rather than the literal code.
 FUNCTION run_train_pipeline(config):
     load benchmark VCF(s), extract feature matrix X and truth labels y
     build genomic-block groups for leakage-aware, block-wise CV splitting
-    impute missing feature values within each CV fold only (no leakage)
+    impute missing values and standardize (GM, BGM, LogReg only) within each CV fold only
 
     FOR each of 5 CV folds:
-        fit generative models:      GM, BGM                      (unsupervised)
+        fit generative models:      GM, BGM   (one mixture per class, on true and on false calls;
+                                               score = sigmoid(log-likelihood ratio))
         fit discriminative models:  LogReg, RF, LightGBM          (supervised)
         fit LightGBM extensions:
             LGB_Bayes    <- Optuna search over LightGBM hyperparameters,
@@ -51,7 +52,7 @@ FUNCTION run_train_pipeline(config):
                              maximizing  λ * PR_AUC - (1-λ) * runtime
         select hybrid weight α via nested CV grid search over
             p_H(x; α) = α * p_LGB(x) + (1-α) * p_GM(x)
-        record out-of-fold scores for every model + Hybrid_0.8 comparator
+        record out-of-fold scores for every model + Hybrid_0.8 / Hybrid_0.7 comparators
 
     aggregate per-fold metrics (AUC, PR_AUC, threshold metrics)
     run paired statistical tests across all model pairs:
@@ -59,25 +60,27 @@ FUNCTION run_train_pipeline(config):
         apply Holm's correction across all pairwise comparisons
 
     refit each model family on the full benchmark data  -> final_models
-    save final_models, imputer, and diagnostic plots to trained_model_dir
+    save final_models, imputer, scaler and diagnostic plots to trained_model_dir
 ```
 
 ### Apply mode
 
 ```
 FUNCTION run_apply_pipeline(config):
-    load trained_models and imputer from trained_model_dir
+    load trained_models, imputer and scaler from trained_model_dir
     stream-parse the target WGS VCF (apply_input_vcf) in batches
     extract the same eight-feature matrix used in training
-    apply the leakage-aware imputer (fit only on benchmark data)
+    apply the imputer and scaler fitted on the benchmark data
 
     FOR each trained model (GM, BGM, LogReg, RF, LightGBM,
-                            LGB_Bayes, LGB_MultiObj, Hybrid_α, Hybrid_0.8):
+                            LGB_Bayes, LGB_MultiObj, Hybrid_α, Hybrid_0.8, Hybrid_0.7):
         score every variant  -> per-model score vector
     write per-variant scores to a scores CSV
 
     IF external_validation.clinvar.enabled:
-        load ClinVar pathogenic positions -> positive label set
+        load expert-panel ClinVar records -> positive label set
+            (legacy definition: pathogenic AND benign records are pooled;
+             scripts/reeval_external.py separates them and is what the paper uses)
         label scored variants (positive vs. background)
         FOR each model:
             compute AUC, PR summaries, tranche precision/recall/F1
@@ -94,8 +97,8 @@ FUNCTION run_apply_pipeline(config):
             as for ClinVar, using a much larger positive class
 
     generate apply-mode diagnostic plots:
-        score CDFs and density histograms (Figures 1-2)
-        pairwise ΔAUC forest plots (Figures 6-7)
+        score CDFs and density histograms
+        pairwise ΔAUC forest plots
     write all tables, figures, and a timestamped run summary to output_dir
 ```
 
@@ -104,9 +107,10 @@ FUNCTION run_apply_pipeline(config):
 ```
 p_H(x; α)   = α * p_LGB(x) + (1 - α) * p_GM(x)      # Hybrid_α, α chosen by CV
 p_H(x; 0.8) = 0.80 * p_LGB(x) + 0.20 * p_GM(x)       # Hybrid_0.8, fixed weight
+p_H(x; 0.7) = 0.70 * p_LGB(x) + 0.30 * p_GM(x)       # Hybrid_0.7, fixed weight
 ```
 
-`p_GM(x)` is the monotone-mapped Gaussian-mixture evidence rescaled to [0, 1];
+`p_GM(x)` is the sigmoid of the Gaussian-mixture log-likelihood ratio;
 `p_LGB(x)` is the LightGBM class probability.
 
 ## Known naming inconsistency
@@ -123,8 +127,22 @@ not acted on automatically since it would change output file/column names.
 - Preserve function bodies verbatim when moving code between modules; this is
   scientific-analysis code backing a submitted manuscript, so mechanical
   refactors should not change numerical behavior.
-- After any change touching more than one module, sanity-check the import
-  graph above still holds (no new cycles) and that
-  `python3 -m py_compile src/postfilter_pipeline/*.py` passes.
+- After any change, run `pytest -m "not slow"` (seconds) and, before a
+  release, `pytest -m slow` (a full train + apply run on synthetic data).
+- The package must stay numerically equivalent to the run behind the paper;
+  `results/` holds that run's outputs, and CI checks that
+  `scripts/make_results.py` regenerates the paper's tables from them.
 - Config templates (`configs/*.example.yaml`) are tracked; `configs/*.local.yaml`
   is gitignored and is where real, machine-specific paths belong.
+
+## Analysis scripts
+
+`scripts/` holds the stand-alone scripts used for the paper's statistics and
+tables. They read pipeline outputs and do not import the package:
+
+| Script | Input | Output |
+|---|---|---|
+| `reeval_external.py` | apply-mode scores CSV, ClinVar VCF | `results/external_validation/*` |
+| `make_results.py` | `results/` | LaTeX tables and figures of the paper |
+| `plot_scores.py` | apply-mode scores CSV | score-distribution figure |
+| `count_clinvar_pathogenic.py` | apply-mode scores CSV, ClinVar VCF | ClinVar P/LP records in the callset |

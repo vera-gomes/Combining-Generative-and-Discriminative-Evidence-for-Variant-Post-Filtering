@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below."
+title: "Combining Generative and Discriminative Evidence for Variant Post-Filtering"
+type: software
+version: 0.2.0
+license: MIT
+repository-code: "https://github.com/vera-gomes/Combining-Generative-and-Discriminative-Evidence-for-Variant-Post-Filtering"
+authors:
+  - family-names: Pinto
+    given-names: Vera
+    email: vgpinto@ciencias.ulisboa.pt
+    affiliation: "DCM and CEAUL, Faculdade de Ciências, Universidade de Lisboa"
+  - family-names: Sousa
+    given-names: Lisete
+    affiliation: "DCM and CEAUL, Faculdade de Ciências, Universidade de Lisboa"
+  - family-names: Silva
+    given-names: Carina
+    affiliation: "CEAUL, Universidade de Lisboa; Escola Superior de Saúde de Lisboa, Instituto Politécnico de Lisboa"
+keywords:
+  - variant calling
+  - variant post-filtering
+  - LightGBM
+  - Gaussian mixture
+  - bioinformatics
+preferred-citation:
+  type: article
+  title: "Combining Generative and Discriminative Evidence for Variant Post-Filtering"
+  journal: "Frontiers in Bioinformatics"
+  authors:
+    - family-names: Pinto
+      given-names: Vera
+    - family-names: Sousa
+      given-names: Lisete
+    - family-names: Silva
+      given-names: Carina
+  notes: "Under revision."

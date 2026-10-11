@@ -477,7 +477,7 @@ def cross_validation_evaluation_fixed(X_all, y_all, groups=None, n_splits=5,
         # ---- LR ----
         lr_cv = LogisticRegression(max_iter=1000, random_state=int(random_state) + fold).fit(X_train_scaled, y_train)
         lr_scores = lr_cv.predict_proba(X_val_scaled)[:, 1]
-        metrics_all["LR"].append(_metric_dict_for_model("LR", y_val, lr_scores))
+        metrics_all["LogReg"].append(_metric_dict_for_model("LogReg", y_val, lr_scores))
         oof_scores["LogReg"][val_idx] = lr_scores
 
         # ---- RF ----
@@ -488,13 +488,13 @@ def cross_validation_evaluation_fixed(X_all, y_all, groups=None, n_splits=5,
                     n_jobs=2, random_state=int(random_state) + fold,
                 ).fit(X_train, y_train)
                 rf_scores = rf_cv.predict_proba(X_val)[:, 1]
-                metrics_all["RF"].append(_metric_dict_for_model("RF", y_val, rf_scores))
+                metrics_all["RandForest"].append(_metric_dict_for_model("RandForest", y_val, rf_scores))
                 oof_scores["RandForest"][val_idx] = rf_scores
             except Exception as e:
                 logging.warning(f"RF fold {fold} failed: {e}")
-                metrics_all["RF"].append(_nan_metric_dict())
+                metrics_all["RandForest"].append(_nan_metric_dict())
         else:
-            metrics_all["RF"].append(_nan_metric_dict())
+            metrics_all["RandForest"].append(_nan_metric_dict())
 
         # ---- LGB variants ----
         if LGBM_AVAILABLE:
