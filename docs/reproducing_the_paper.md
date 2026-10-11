@@ -8,6 +8,14 @@ This guide goes from public data to every table and figure of *Combining Generat
 pip install -e ".[full]"
 ```
 
+## Software versions used for the paper
+
+Python 3.12 with scikit-learn 1.4.1, LightGBM 4.6.0, Optuna 4.8.0, pysam 0.23.3, NumPy 1.26.4, pandas 2.3.3 and SciPy 1.16.3. Other versions satisfying `pyproject.toml` should give the same results up to small numerical differences. To match exactly:
+
+```bash
+pip install scikit-learn==1.4.1.post1 lightgbm==4.6.0 optuna==4.8.0 pysam==0.23.3 numpy==1.26.4 pandas==2.3.3 scipy==1.16.3
+```
+
 ## 1. Train on NA12878
 
 Inputs:
