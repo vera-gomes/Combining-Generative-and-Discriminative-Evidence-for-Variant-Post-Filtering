@@ -43,3 +43,5 @@ jobs:
           python scripts/make_results.py --reeval results/external_validation --train results/train
           --clinvar-records results/external_validation/clinvar_records_in_callset.csv.gz
           --tables /tmp/tables --figures /tmp/figures
+      - run: python scripts/make_supp_extra.py --results results --tables /tmp/tables
+      - run: python scripts/fig_alpha_three.py --results results --out /tmp/figures/fig_alpha_three

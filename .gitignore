@@ -31,3 +31,10 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# large outputs of local runs (not part of the published results)
+results/stacked_hybrid/scored_variants_with_stacked.csv
+results/stacked_hybrid/stacked_scores_NA06985.csv
+results/stacked_hybrid/stacked_cv_oof.csv.gz
+test_conv/
+/stacked_hybrid.py

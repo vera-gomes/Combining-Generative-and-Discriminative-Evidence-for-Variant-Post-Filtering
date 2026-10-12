@@ -115,11 +115,13 @@ The full workflow is described in [`docs/reproducing_the_paper.md`](docs/reprodu
 |---|---|---|
 | 1. Train on NA12878 | `postfilter-pipeline --config configs/train.local.yaml` | models, CV results (`results/train/`) |
 | 2. Score NA06985 | `postfilter-pipeline --config configs/apply.local.yaml` | `scored_variants_with_external_validation.csv` (5,069,016 calls) |
-| 3. External validation | `python scripts/reeval_external.py --scores <scores.csv> --clinvar clinvar.vcf.gz --out results/external_validation --n-boot 1000` | summaries, pairwise tests and operating points for each evaluation regime |
-| 4. Tables and figures | `python scripts/make_results.py --reeval results/external_validation --train results/train --clinvar-records results/external_validation/clinvar_records_in_callset.csv.gz` | every table (`tables/*.tex`) and figure of the paper and supplement |
+| 3. External validation | `python scripts/reeval_external.py --scores <scores.csv> --clinvar clinvar.vcf.gz --out results/external_validation --n-boot 1000 --chroms primary` | summaries, pairwise tests and operating points for each evaluation regime (chr1–22 and chrX, 4,963,081 calls) |
+| 4. Tables and figures | `python scripts/make_results.py --reeval results/external_validation --train results/train --clinvar-records results/external_validation/clinvar_records_in_callset.csv.gz` | main-text tables, Supplementary Tables S1, S2 and S7–S16, heatmaps |
 | 5. Score distributions | `python scripts/plot_scores.py --scores <scores.csv> --out fig_score_distributions` | Figure 2 |
+| 6. Stacked hybrid and α analyses | `scripts/stacked_hybrid.py`, `scripts/alpha_convergence.py`, `scripts/alpha_curve_external.py`, `scripts/hybrid_alpha_simulation.py` | `results/stacked_hybrid/`, `results/alpha_*/` |
+| 7. Remaining supplement | `python scripts/make_supp_extra.py` and `python scripts/fig_alpha_three.py` | Supplementary Tables S3–S6 and Figure S2 |
 
-The `results/` folder holds the result files of the published run, so step 4 regenerates every table without rerunning steps 1–3. The external-validation statistics in the paper come from `scripts/reeval_external.py` (exact DeLong tests with Holm correction, and full-data paired bootstraps with 1,000 replicates), not from the summaries that apply mode writes itself; see [Known limitations](#known-limitations).
+The `results/` folder holds the result files of the published run, so steps 4 and 7 regenerate every table without rerunning the other steps. The external-validation statistics in the paper come from `scripts/reeval_external.py` (exact DeLong tests with Holm correction, and full-data paired bootstraps with 1,000 replicates), not from the summaries that apply mode writes itself; see [Known limitations](#known-limitations).
 
 ## Repository structure
 
@@ -138,13 +140,22 @@ The `results/` folder holds the result files of the published run, so step 4 reg
 │   ├── memory_utils.py        memory monitoring
 │   └── pipeline.py            train and apply workflows
 ├── scripts/                   analysis scripts used for the paper
-│   ├── reeval_external.py     external-validation statistics (all regimes)
-│   ├── make_results.py        all tables and figures from the result files
-│   ├── plot_scores.py         score-distribution figure
+│   ├── reeval_external.py     external-validation statistics (all regimes; --chroms primary|all)
+│   ├── make_results.py        main-text tables, most supplementary tables, heatmaps
+│   ├── make_supp_extra.py     Supplementary Tables S3–S6 (stacked hybrid, all-calls analysis)
+│   ├── plot_scores.py         score-distribution figure (Figure 2)
+│   ├── stacked_hybrid.py      stacked hybrid: GM log-likelihood ratio as a LightGBM feature
+│   ├── alpha_convergence.py   hybrid weight α: benchmark block CV over seeds
+│   ├── alpha_curve_external.py  hybrid weight α: NA06985 after transfer, per chromosome
+│   ├── hybrid_alpha_simulation.py  hybrid weight α: illustrative simulation
+│   ├── fig_alpha_three.py     Supplementary Figure S2
 │   └── count_clinvar_pathogenic.py  lists ClinVar P/LP records present in a callset
 ├── results/                   result files of the published run
 │   ├── train/                 CV metrics, LightGBM tuning, hybrid-α selection
-│   └── external_validation/   per-regime summaries, pairwise tests, operating points, ClinVar records
+│   ├── external_validation/   main analysis (chr1–22 and chrX): per-regime summaries, pairwise tests, operating points, ClinVar records
+│   ├── external_validation_allcalls/  the same on all 5,069,016 calls (sensitivity analysis)
+│   ├── stacked_hybrid/        stacked hybrid: benchmark CV, feature importance, NA06985 re-evaluation
+│   └── alpha_simulation/, alpha_convergence/, alpha_external/  analyses of the hybrid weight α
 ├── configs/                   train and apply templates
 ├── docs/                      reproduction guide, population-database URLs
 ├── tests/                     unit tests and an end-to-end smoke test

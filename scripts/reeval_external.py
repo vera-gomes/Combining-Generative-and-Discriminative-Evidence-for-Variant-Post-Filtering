@@ -413,16 +413,26 @@ def main():
     ap.add_argument("--exclude-models", nargs="*", default=[],
                     help="e.g. Hybrid_LGB_alpha07 to reproduce the 8-model set")
     ap.add_argument("--skip-popdb", action="store_true")
+    ap.add_argument("--chroms", default="all", choices=["all", "primary", "primary_no20"],
+                    help="primary = chr1-22 and X only (drops alt/random/Un/decoy contigs, EBV, chrM, chrY, "
+                         "which population databases do not cover); primary_no20 also drops chr20")
     ap.add_argument("--only", nargs="*", default=[],
                     help="run only these contrasts, e.g. popdb clinvar_2star_B_vs_bg")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
     df, score_cols, has_pop = load_scores(args.scores, args.popdb_col)
+    if args.chroms != "all":
+        keep = [str(i) for i in range(1, 23)] + ["X"]
+        if args.chroms == "primary_no20":
+            keep.remove("20")
+        n0 = len(df)
+        df = df[df["CHROM"].isin(keep)].reset_index(drop=True)
+        log.info(f"--chroms {args.chroms}: kept {len(df):,} of {n0:,} variants")
     models, identical = dedupe_models(df, score_cols)
     models = [mm for mm in models if mm not in set(args.exclude_models)]
     run_info = {"n_variants": int(len(df)), "models": models, "identical_models": identical,
-                "n_boot": args.n_boot, "seed": args.seed, "contrasts": []}
+                "n_boot": args.n_boot, "seed": args.seed, "chroms": args.chroms, "contrasts": []}
 
     nan_rows = df[[f"{mm}_score" for mm in models]].isna().any(axis=1)
     if nan_rows.any():

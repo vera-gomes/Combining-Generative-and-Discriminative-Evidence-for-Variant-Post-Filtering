@@ -55,15 +55,15 @@ The population-database sources in the template (gnomAD v3.1.2 and 1000 Genomes)
 python scripts/reeval_external.py \
     --scores output/apply/scored_variants_with_external_validation.csv \
     --clinvar clinvar.vcf.gz \
-    --out results/external_validation --n-boot 1000 --seed 2026
+    --out results/external_validation --n-boot 1000 --seed 2026 --chroms primary
 ```
 
-The paper used the ClinVar GRCh38 VCF of 4 October 2026. The script retrains nothing. It recomputes, for each evaluation regime:
+The paper used the ClinVar GRCh38 VCF of 4 October 2026. The main analysis is restricted to the primary chromosomes (`--chroms primary`: chr1–22 and chrX, 4,963,081 of the 5,069,016 calls). NA06985 is female, so chrY calls reflect mis-mapping, and calls on unplaced, alternative and decoy contigs are rarely in population databases; these 105,935 calls made up 47% of the PopDB background. The same command with `--chroms all --out results/external_validation_allcalls` gives the sensitivity analysis of all calls (Supplementary Table S6). The script retrains nothing. It recomputes, for each evaluation regime:
 
 | Prefix | Positives | Background |
 |---|---|---|
-| `popdb` | PopDB-supported calls (4,859,857) | other calls (209,159) |
-| `clinvar_expert_B_vs_bg` | benign/likely benign records reviewed by an expert panel (363) | calls absent from ClinVar (5,044,742) |
+| `popdb` | PopDB-supported calls (4,853,038) | other calls (110,043) |
+| `clinvar_expert_B_vs_bg` | benign/likely benign records reviewed by an expert panel (363) | calls absent from ClinVar (4,938,807) |
 | `clinvar_2star_B_vs_bg` | benign/likely benign records with ≥2 review stars (24,270) | calls absent from ClinVar |
 | `clinvar_*_vs_popdbbg` | as above | PopDB-supported calls absent from ClinVar (sensitivity analysis) |
 | `clinvar_legacy_expertPB_vs_bg` | every expert-panel record (the definition of the original submission) | calls absent from ClinVar |
@@ -82,4 +82,46 @@ python scripts/plot_scores.py \
     --out figures/fig_score_distributions
 ```
 
-`make_results.py` writes every table of the main text and the Supplementary Material as LaTeX (`tables/*.tex`) and the AUC heatmaps and α-selection figure (`figures/`). The continuous-integration workflow checks that these tables regenerate from `results/`. `plot_scores.py` needs the per-call scores file from step 2 and produces Figure 2.
+`make_results.py` writes the tables of the main text and of the Supplementary Material that come from the main analysis as LaTeX (`tables/*.tex`), and the AUC heatmaps and nested-CV α figure (`figures/`). The continuous-integration workflow checks that these tables regenerate from `results/`. `plot_scores.py` needs the per-call scores file from step 2 and produces Figure 2 (primary chromosomes by default; `--chroms all` for all calls).
+
+The remaining supplementary tables and Figure S2 come from the analyses in step 5:
+
+```bash
+python scripts/make_supp_extra.py --results results --tables tables      # Tables S3-S6
+python scripts/fig_alpha_three.py --results results --out figures/fig_alpha_three   # Figure S2
+```
+
+## 5. Additional analyses of the revision
+
+**Stacked hybrid (Supplementary Section 1.2, Tables S3–S5, main-text Table 8).** The Gaussian-mixture log-likelihood ratio is given to LightGBM as a ninth feature, cross-fitted within the training data. One run does the paired 5-fold benchmark CV, the final fit and the scoring of NA06985 (about two hours for the CV on 4.9 million calls), and the re-evaluation is then run on its output:
+
+```bash
+python scripts/stacked_hybrid.py \
+    --annotations <train_output>/annotations_labeled.csv \
+    --tuning-json <train_output>/models/lightgbm_tuning_summary.json \
+    --apply-vcf NA06985.vcf.gz \
+    --scores-in output/apply/scored_variants_with_external_validation.csv \
+    --out results/stacked_hybrid
+python scripts/reeval_external.py \
+    --scores results/stacked_hybrid/scored_variants_with_stacked.csv \
+    --clinvar clinvar.vcf.gz --out results/stacked_hybrid/reeval \
+    --n-boot 1000 --seed 2026 --chroms primary \
+    --exclude-models GM BGM LogReg RandForest Hybrid_LGB_alpha07
+```
+
+`results/stacked_hybrid/` keeps the per-fold and summary CV results, the DeLong tests, the feature importances, `stacked_cv_oof_summary.csv` (pooled out-of-fold AUC and false calls kept at 0.90 and 0.99 sensitivity, computed from the out-of-fold scores, which are too large to store here) and the re-evaluation in `reeval/`.
+
+**Hybrid weight α (Supplementary Figure S2).**
+
+```bash
+# (a) illustrative simulation (simulated scores, not the study data)
+python scripts/hybrid_alpha_simulation.py
+# (b) benchmark: 5-fold block CV of NA12878 over the α grid, 10 seeds
+python scripts/alpha_convergence.py --annotations <train_output>/annotations_labeled.csv \
+    --out results/alpha_convergence --seeds 10
+# (c) NA06985 after transfer: PopDB AUC of the blend for each α and chromosome
+python scripts/alpha_curve_external.py \
+    --scores output/apply/scored_variants_with_external_validation.csv --out results/alpha_external
+```
+
+Panel (c) plots the 22 autosomes from `alpha_external_per_chrom.csv` and the pooled primary-chromosome AUC of the evaluated models from `results/external_validation/popdb_summary.csv`; the pooled column of `alpha_external_summary.csv` refers to all calls.

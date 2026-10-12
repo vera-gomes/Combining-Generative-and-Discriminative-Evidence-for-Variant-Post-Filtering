@@ -1,0 +1,101 @@
+{
+  "n_variants": 4963081,
+  "models": [
+    "LGB",
+    "LGB_Bayes",
+    "LGB_MultiObj",
+    "Hybrid_LGB_alpha08",
+    "Stack_LGB",
+    "Stack_LGB_Bayes"
+  ],
+  "identical_models": {
+    "Hybrid_LGB": "LGB",
+    "Hybrid_LGB_Bayes": "LGB_Bayes",
+    "Hybrid_LGB_MultiObj": "LGB_MultiObj",
+    "Hybrid_LGB_alpha1": "LGB"
+  },
+  "n_boot": 1000,
+  "seed": 2026,
+  "chroms": "primary",
+  "contrasts": [
+    {
+      "contrast": "clinvar_legacy_expertPB_vs_bg",
+      "n_pos": 363,
+      "n_neg": 4962718,
+      "self_check": "ok"
+    },
+    {
+      "contrast": "clinvar_expert_P_vs_bg",
+      "n_pos": 0,
+      "n_neg": 4938807,
+      "skipped": true
+    },
+    {
+      "contrast": "clinvar_expert_B_vs_bg",
+      "n_pos": 363,
+      "n_neg": 4938807,
+      "self_check": "ok"
+    },
+    {
+      "contrast": "clinvar_expert_P_vs_B",
+      "n_pos": 0,
+      "n_neg": 363,
+      "skipped": true
+    },
+    {
+      "contrast": "clinvar_2star_P_vs_bg",
+      "n_pos": 4,
+      "n_neg": 4938807,
+      "skipped": true
+    },
+    {
+      "contrast": "clinvar_2star_B_vs_bg",
+      "n_pos": 24270,
+      "n_neg": 4938807,
+      "self_check": "ok"
+    },
+    {
+      "contrast": "clinvar_2star_P_vs_B",
+      "n_pos": 4,
+      "n_neg": 24270,
+      "skipped": true
+    },
+    {
+      "contrast": "clinvar_expert_B_vs_popdbbg",
+      "n_pos": 363,
+      "n_neg": 4828764,
+      "self_check": "ok"
+    },
+    {
+      "contrast": "clinvar_2star_B_vs_popdbbg",
+      "n_pos": 24270,
+      "n_neg": 4828764,
+      "self_check": "ok"
+    },
+    {
+      "contrast": "popdb",
+      "n_pos": 4853038,
+      "n_neg": 110043,
+      "self_check": "ok"
+    }
+  ],
+  "clinvar_fileDate": "2026-10-04",
+  "clinvar_counts_by_tier_class": [
+    {
+      "Tier": "expert",
+      "Class": "B",
+      "n": 363
+    },
+    {
+      "Tier": "multi",
+      "Class": "B",
+      "n": 23907
+    },
+    {
+      "Tier": "multi",
+      "Class": "P",
+      "n": 4
+    }
+  ],
+  "clinvar_legacy_expert_PB_n": 363
+}

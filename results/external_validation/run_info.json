@@ -1,5 +1,5 @@
 {
-  "n_variants": 5069016,
+  "n_variants": 4963081,
   "models": [
     "GM",
     "BGM",
@@ -19,23 +19,24 @@
   },
   "n_boot": 1000,
   "seed": 2026,
+  "chroms": "primary",
   "contrasts": [
     {
       "contrast": "clinvar_legacy_expertPB_vs_bg",
       "n_pos": 363,
-      "n_neg": 5068653,
+      "n_neg": 4962718,
       "self_check": "ok"
     },
     {
       "contrast": "clinvar_expert_P_vs_bg",
       "n_pos": 0,
-      "n_neg": 5044742,
+      "n_neg": 4938807,
       "skipped": true
     },
     {
       "contrast": "clinvar_expert_B_vs_bg",
       "n_pos": 363,
-      "n_neg": 5044742,
+      "n_neg": 4938807,
       "self_check": "ok"
     },
     {
@@ -47,13 +48,13 @@
     {
       "contrast": "clinvar_2star_P_vs_bg",
       "n_pos": 4,
-      "n_neg": 5044742,
+      "n_neg": 4938807,
       "skipped": true
     },
     {
       "contrast": "clinvar_2star_B_vs_bg",
       "n_pos": 24270,
-      "n_neg": 5044742,
+      "n_neg": 4938807,
       "self_check": "ok"
     },
     {
@@ -65,19 +66,19 @@
     {
       "contrast": "clinvar_expert_B_vs_popdbbg",
       "n_pos": 363,
-      "n_neg": 4835583,
+      "n_neg": 4828764,
       "self_check": "ok"
     },
     {
       "contrast": "clinvar_2star_B_vs_popdbbg",
       "n_pos": 24270,
-      "n_neg": 4835583,
+      "n_neg": 4828764,
       "self_check": "ok"
     },
     {
       "contrast": "popdb",
-      "n_pos": 4859857,
-      "n_neg": 209159,
+      "n_pos": 4853038,
+      "n_neg": 110043,
       "self_check": "ok"
     }
   ],

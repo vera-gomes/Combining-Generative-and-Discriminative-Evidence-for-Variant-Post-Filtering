@@ -2,7 +2,8 @@
 """
 plot_scores.py — Figure 2: apply-mode score distributions of the
 nine distinct models on NA06985, from the corrected run. Reads the large scores
-file in chunks (low memory) and uses all 5,069,016 calls.
+file in chunks (low memory). By default only calls on chr1-22 and chrX are used
+(4,963,081 calls, the main analysis); --chroms all uses all 5,069,016 calls.
 
   python3 plot_scores.py \
       --scores output/apply/scored_variants_with_external_validation.csv \
@@ -36,16 +37,21 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--scores", required=True)
 ap.add_argument("--popdb-col", default="IsExternalVariant")
 ap.add_argument("--out", default="fig_score_distributions")
+ap.add_argument("--chroms", choices=["all", "primary"], default="primary",
+                help="primary: chr1-22 and chrX only (main analysis of the revised paper)")
 a = ap.parse_args()
 
 header = pd.read_csv(a.scores, nrows=0).columns
 cols = [f"{m}_score" for m in ORDER if f"{m}_score" in header]
 has_pop = a.popdb_col in header
-use = cols + ([a.popdb_col] if has_pop else [])
+use = cols + ([a.popdb_col] if has_pop else []) + ["CHROM"]
 counts = {c: {"all": np.zeros(len(BINS) - 1), "pos": np.zeros(len(BINS) - 1), "neg": np.zeros(len(BINS) - 1)}
           for c in cols}
 n = 0
-for chunk in pd.read_csv(a.scores, usecols=use, chunksize=500_000):
+PRIMARY = {str(i) for i in range(1, 23)} | {"X"}
+for chunk in pd.read_csv(a.scores, usecols=use, chunksize=500_000, dtype={"CHROM": str}):
+    if a.chroms == "primary":
+        chunk = chunk[chunk["CHROM"].str.replace("chr", "", regex=False).isin(PRIMARY)]
     n += len(chunk)
     y = chunk[a.popdb_col].to_numpy() == 1 if has_pop else None
     for c in cols:

@@ -20,6 +20,10 @@ Changes relative to the code of the original submission (`try_live27.py`), made 
 - `results/`: the result files behind every table of the paper.
 - Unit tests, an end-to-end smoke test and GitHub Actions CI. CI also checks that the paper's tables regenerate from `results/`.
 - `CITATION.cff`, `docs/reproducing_the_paper.md`. The README was rewritten to match the repository.
+- `reeval_external.py --chroms primary|all`. The main analysis of the revised paper is restricted to chr1–22 and chrX; `results/external_validation/` holds it and `results/external_validation_allcalls/` the analysis of all calls.
+- Stacked hybrid (`scripts/stacked_hybrid.py`, `results/stacked_hybrid/`), suggested by Reviewer 3: the Gaussian-mixture log-likelihood ratio is a cross-fitted ninth LightGBM feature.
+- Analyses of the hybrid weight α: `scripts/alpha_convergence.py` (benchmark), `scripts/alpha_curve_external.py` (NA06985), `scripts/hybrid_alpha_simulation.py` (illustrative simulation), with results in `results/alpha_*/`.
+- `scripts/make_supp_extra.py` and `scripts/fig_alpha_three.py` (Supplementary Tables S3–S6 and Figure S2); `plot_scores.py` uses the primary chromosomes by default.
 
 ## 0.1.0 — original submission (August 2026)
 
