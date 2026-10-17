@@ -1,0 +1,17 @@
+\begin{tabular}{@{}lcccrrr@{}}
+\toprule
+ & & & & \multicolumn{2}{c}{\textbf{Sensitivity 0.90}} & \textbf{Sens.\ 0.99} \\
+\cmidrule(lr){5-6}\cmidrule(l){7-7}
+\textbf{Model} & \textbf{AUC} & \textbf{95\% CI (DeLong)} & \textbf{AP} & \textbf{Background kept} & \textbf{Retained (\%)} & \textbf{Background kept} \\
+\midrule
+\mdl{GM} & 0.9108 & [0.9100, 0.9116] & 0.9975 & 20,419 & 88.42 & 82,503 \\
+\mdl{BGM} & 0.9143 & [0.9136, 0.9151] & 0.9976 & 18,661 & 88.38 & 82,820 \\
+\mdl{LogReg} & 0.9332 & [0.9324, 0.9340] & 0.9980 & 16,289 & 88.33 & 79,698 \\
+\mdl{RF} & 0.9391 & [0.9384, 0.9397] & 0.9983 & 14,979 & 88.31 & 97,398 \\
+\mdl{LGB} & 0.9419 & [0.9413, 0.9425] & 0.9983 & 14,190 & 88.29 & 96,333 \\
+\mdl{LGB\_Bayes} & \textbf{0.9505} & [0.9500, 0.9510] & 0.9986 & 9,595 & 88.20 & 94,841 \\
+\mdl{LGB\_MultiObj} & 0.9498 & [0.9493, 0.9503] & 0.9986 & 9,901 & 88.20 & 95,382 \\
+\mdl{Hybrid\_0.8} & 0.9417 & [0.9411, 0.9423] & 0.9984 & 13,628 & 88.28 & 96,314 \\
+\mdl{Hybrid\_0.7} & 0.9407 & [0.9400, 0.9413] & 0.9983 & 13,585 & 88.28 & 96,312 \\
+\bottomrule
+\end{tabular}

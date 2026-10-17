@@ -1,0 +1,21 @@
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Hyperparameter} & \textbf{\mdl{LGB}} & \textbf{\mdl{LGB\_Bayes}} & \textbf{\mdl{LGB\_MultiObj}} \\
+\midrule
+\texttt{n\_estimators} & 100 & 292 & 183 \\
+\texttt{learning\_rate} & 0.05 & 0.1589 & 0.09083 \\
+\texttt{max\_depth} & 7 & 7 & 11 \\
+\texttt{num\_leaves} & 31 & 128 & 245 \\
+\texttt{min\_child\_samples} & 20 & 65 & 35 \\
+\texttt{subsample} & 0.8 & 0.8429 & 0.9065 \\
+\texttt{colsample\_bytree} & 0.8 & 0.6864 & 0.8522 \\
+\texttt{reg\_alpha} & 0 & $2.3\times10^{-8}$ & $6.5\times10^{-7}$ \\
+\texttt{reg\_lambda} & 0 & $6.7\times10^{-7}$ & 0.1362 \\
+\texttt{min\_split\_gain} & -- & 0.3189 & 0.5177 \\
+\midrule
+Tuning criterion & none (defaults) & AUC & $0.85\,$AP $-\,0.15\min(t/5\,\mathrm{s},1)$ \\
+Trials & -- & 25 & 25 \\
+Validation score of selected trial & 0.8481 (AUC) & 0.8496 (AUC) & 0.9287 (AP); $J=$0.6394 \\
+Fit time of selected trial (s) & -- & 49.2 & 41.3 \\
+\bottomrule
+\end{tabular}
